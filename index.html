@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMI Calculator — Loan Amortization Tool</title>
+<style>
+  :root {
+    --bg: #0d0a14;
+    --bg-panel: #161020;
+    --bg-input: #1c1628;
+    --line: #2e2440;
+    --purple: #9b6dff;
+    --purple-dim: #6b4ba3;
+    --cyan: #5ee6d4;
+    --text: #e8e3f5;
+    --text-dim: #8d82ab;
+    --principal-color: #5ee6d4;
+    --interest-color: #ff6d9b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --serif: 'Fraunces', Georgia, serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(155,109,255,0.08), transparent 50%),
+      radial-gradient(circle at 85% 100%, rgba(94,230,212,0.05), transparent 50%);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    padding: 48px 24px 80px;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; }
+
+  /* ---- Header ---- */
+  header { margin-bottom: 40px; }
+  .eyebrow {
+    color: var(--cyan);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(32px, 6vw, 52px);
+    line-height: 1.05;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--purple);
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* ---- Layout ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+  }
+  .panel-title {
+    font-family: var(--serif);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 22px;
+  }
+
+  /* ---- Inputs ---- */
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .field label .val {
+    color: var(--cyan);
+    font-weight: 600;
+  }
+  .field input[type="range"] {
+    width: 100%;
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+    accent-color: var(--purple);
+  }
+  .field input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--purple);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(155,109,255,0.6);
+  }
+  .field input[type="number"] {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input[type="number"]:focus {
+    border-color: var(--purple);
+  }
+
+  /* ---- Result ---- */
+  .result-panel {
+    background: linear-gradient(160deg, var(--bg-panel), #1a1326);
+    border: 1px solid var(--purple-dim);
+  }
+  .emi-display {
+    text-align: center;
+    padding: 8px 0 28px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .emi-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .emi-amount {
+    font-family: var(--serif);
+    font-size: clamp(36px, 5vw, 48px);
+    font-weight: 600;
+    color: var(--text);
+  }
+  .emi-amount .currency { color: var(--purple); font-size: 0.55em; }
+  .emi-per-month { color: var(--text-dim); font-size: 12px; margin-top: 4px; }
+
+  /* ---- Split bar (signature element) ---- */
+  .split-section { margin-bottom: 24px; }
+  .split-bar {
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    border: 1px solid var(--line);
+  }
+  .split-principal, .split-interest {
+    transition: width 0.4s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #0d0a14;
+  }
+  .split-principal { background: var(--principal-color); }
+  .split-interest { background: var(--interest-color); }
+  .split-legend {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
+  .legend-item .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-item .amt { color: var(--text); font-weight: 600; }
+
+  /* ---- Stats ---- */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .stat {
+    background: var(--bg-input);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .stat-value { font-family: var(--serif); font-size: 18px; color: var(--text); }
+
+  /* ---- Footer ---- */
+  footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  footer a { color: var(--cyan); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  .formula-note {
+    margin-top: 28px;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    border-left: 2px solid var(--purple-dim);
+    padding-left: 14px;
+  }
+  .formula-note code { color: var(--cyan); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Loan Math, Visualized</div>
+    <h1>What your loan<br>actually <em>costs</em> you.</h1>
+    <p class="subtitle">
+      Every EMI is a tug-of-war between principal and interest. Move the sliders
+      and watch how tenure and rate shift that balance — instantly, with the
+      standard amortization formula running underneath.
+    </p>
+  </header>
+
+  <div class="grid">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <div class="panel-title">Loan Details</div>
+
+      <div class="field">
+        <label>Principal Amount (₹) <span class="val" id="principalVal">10,00,000</span></label>
+        <input type="number" id="principalInput" value="1000000" min="1000" step="1000">
+        <input type="range" id="principalSlider" min="10000" max="10000000" step="10000" value="1000000">
+      </div>
+
+      <div class="field">
+        <label>Annual Interest Rate (%) <span class="val" id="rateVal">10.5%</span></label>
+        <input type="number" id="rateInput" value="10.5" min="0" max="40" step="0.1">
+        <input type="range" id="rateSlider" min="0" max="30" step="0.1" value="10.5">
+      </div>
+
+      <div class="field">
+        <label>Tenure (months) <span class="val" id="tenureVal">240 mo · 20 yrs</span></label>
+        <input type="number" id="tenureInput" value="240" min="1" max="480" step="1">
+        <input type="range" id="tenureSlider" min="6" max="480" step="6" value="240">
+      </div>
+
+      <div class="formula-note">
+        EMI = <code>P·R·(1+R)<sup>N</sup> / [(1+R)<sup>N</sup> − 1]</code><br>
+        where R is the monthly rate (annual ÷ 12 ÷ 100) and N is tenure in months.
+      </div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="panel result-panel">
+      <div class="panel-title">Monthly Payment</div>
+
+      <div class="emi-display">
+        <div class="emi-label">Your EMI</div>
+        <div class="emi-amount"><span class="currency">₹</span><span id="emiAmount">9,983.80</span></div>
+        <div class="emi-per-month">per month, for the full tenure</div>
+      </div>
+
+      <div class="split-section">
+        <div class="split-bar">
+          <div class="split-principal" id="splitPrincipal" style="width: 50%">PRINCIPAL</div>
+          <div class="split-interest" id="splitInterest" style="width: 50%">INTEREST</div>
+        </div>
+        <div class="split-legend">
+          <div class="legend-item"><span class="dot" style="background:var(--principal-color)"></span>Principal: <span class="amt" id="legendPrincipal">₹10,00,000</span></div>
+          <div class="legend-item"><span class="dot" style="background:var(--interest-color)"></span>Interest: <span class="amt" id="legendInterest">₹13,96,112</span></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Total Payment</div>
+          <div class="stat-value" id="totalPayment">₹23,96,112</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Interest</div>
+          <div class="stat-value" id="totalInterest">₹13,96,112</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Built with the standard EMI amortization formula · <a href="https://github.com/" target="_blank">View source on GitHub</a>
+  </footer>
+
+</div>
+
+<script>
+  const principalInput = document.getElementById('principalInput');
+  const principalSlider = document.getElementById('principalSlider');
+  const rateInput = document.getElementById('rateInput');
+  const rateSlider = document.getElementById('rateSlider');
+  const tenureInput = document.getElementById('tenureInput');
+  const tenureSlider = document.getElementById('tenureSlider');
+
+  function formatINR(num) {
+    return '₹' + Math.round(num).toLocaleString('en-IN');
+  }
+
+  function calculateEMI(P, annualRate, N) {
+    const R = (annualRate / 12) / 100;
+    if (R === 0) return P / N;
+    const factor = Math.pow(1 + R, N);
+    return (P * R * factor) / (factor - 1);
+  }
+
+  function update(source) {
+    let P = parseFloat(principalInput.value) || 0;
+    let annualRate = parseFloat(rateInput.value) || 0;
+    let N = parseInt(tenureInput.value) || 1;
+
+    // Sync slider <-> number input depending on what changed
+    if (source === 'principalSlider') principalInput.value = principalSlider.value;
+    if (source === 'principalInput') principalSlider.value = Math.min(Math.max(P, 10000), 10000000);
+    if (source === 'rateSlider') rateInput.value = rateSlider.value;
+    if (source === 'rateInput') rateSlider.value = Math.min(Math.max(annualRate, 0), 30);
+    if (source === 'tenureSlider') tenureInput.value = tenureSlider.value;
+    if (source === 'tenureInput') tenureSlider.value = Math.min(Math.max(N, 6), 480);
+
+    P = parseFloat(principalInput.value) || 0;
+    annualRate = parseFloat(rateInput.value) || 0;
+    N = parseInt(tenureInput.value) || 1;
+
+    document.getElementById('principalVal').textContent = Math.round(P).toLocaleString('en-IN');
+    document.getElementById('rateVal').textContent = annualRate.toFixed(2) + '%';
+    document.getElementById('tenureVal').textContent = N + ' mo · ' + (N/12).toFixed(1) + ' yrs';
+
+    if (P <= 0 || N <= 0) return;
+
+    const emi = calculateEMI(P, annualRate, N);
+    const totalPayment = emi * N;
+    const totalInterest = totalPayment - P;
+
+    document.getElementById('emiAmount').textContent = emi.toLocaleString('en-IN', {maximumFractionDigits: 2, minimumFractionDigits: 2});
+    document.getElementById('totalPayment').textContent = formatINR(totalPayment);
+    document.getElementById('totalInterest').textContent = formatINR(totalInterest);
+    document.getElementById('legendPrincipal').textContent = formatINR(P);
+    document.getElementById('legendInterest').textContent = formatINR(totalInterest);
+
+    const principalPct = Math.max(2, Math.min(98, (P / totalPayment) * 100));
+    const interestPct = 100 - principalPct;
+    document.getElementById('splitPrincipal').style.width = principalPct + '%';
+    document.getElementById('splitInterest').style.width = interestPct + '%';
+  }
+
+  [principalInput, principalSlider, rateInput, rateSlider, tenureInput, tenureSlider].forEach(el => {
+    el.addEventListener('input', (e) => update(e.target.id));
+  });
+
+  update();
+</script>
+</body>
+</html>
